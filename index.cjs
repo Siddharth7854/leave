@@ -179,25 +179,44 @@ const checkDataIntegrity = async () => {
 // Run data integrity check on startup
 setTimeout(checkDataIntegrity, 5000); // Run after 5 seconds
 
-// Test database connection
-pool.query('SELECT NOW()', (err, res) => {
-  if (err) {
-    console.error('Error connecting to the database:', err);
-    console.error('Database connection details:', {
-      host: process.env.DB_HOST || 'localhost',
-      port: process.env.DB_PORT || 5432,
-      database: process.env.DB_NAME || 'buidco_leave',
-      user: process.env.DB_USER || 'postgres'
-    });
-    console.error('Please check:');
-    console.error('1. PostgreSQL service is running');
-    console.error('2. Database credentials are correct');
-    console.error('3. Database exists and is accessible');
-    console.error('4. Firewall/network settings allow connection');
-  } else {
-    console.log('Connected to PostgreSQL database');
+// Test database connection with retry logic
+const testDatabaseConnection = async (retries = 3, delay = 2000) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      console.log(`Attempting database connection (attempt ${i + 1}/${retries})...`);
+      const result = await pool.query('SELECT NOW()');
+      console.log('✅ Connected to PostgreSQL database');
+      console.log('Database timestamp:', result.rows[0].now);
+      return true;
+    } catch (err) {
+      console.error(`❌ Database connection attempt ${i + 1} failed:`, err.message);
+      console.error('Database connection details:', {
+        host: process.env.DB_HOST || 'localhost',
+        port: process.env.DB_PORT || 5432,
+        database: process.env.DB_NAME || 'buidco_leave',
+        user: process.env.DB_USER || 'postgres',
+        ssl: process.env.NODE_ENV === 'production' ? 'enabled' : 'disabled'
+      });
+      
+      if (i < retries - 1) {
+        console.log(`Retrying in ${delay/1000} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        console.error('❌ All database connection attempts failed');
+        console.error('Please check:');
+        console.error('1. PostgreSQL service is running');
+        console.error('2. Database credentials are correct');
+        console.error('3. Database exists and is accessible');
+        console.error('4. Environment variables are set correctly');
+        console.error('5. Firewall/network settings allow connection');
+        return false;
+      }
+    }
   }
-});
+};
+
+// Call the connection test
+testDatabaseConnection();
 
 // Multer config for leave documents
 const leaveDocsStorage = multer.diskStorage({
@@ -1966,6 +1985,39 @@ app.post('/api/notifications/test', async (req, res) => {
     console.error('Error creating test notifications:', err);
     res.status(500).json({ error: err.message });
   }
+});
+
+// Health check endpoint for Railway
+app.get('/health', async (req, res) => {
+  try {
+    // Test database connection
+    await pool.query('SELECT NOW()');
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      database: 'connected',
+      environment: process.env.NODE_ENV || 'development'
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      database: 'disconnected',
+      error: err.message,
+      environment: process.env.NODE_ENV || 'development'
+    });
+  }
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'BUIDCO Leave Management System API',
+    version: '1.0.0',
+    status: 'running',
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Start server
