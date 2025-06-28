@@ -9,7 +9,7 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const port = 5000;
+const port = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
@@ -22,6 +22,10 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'buidco_leave',
   password: process.env.DB_PASSWORD || 'sid91221',
   port: process.env.DB_PORT || 5432,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
+  max: 20
 });
 
 // ===== BACKEND SAFEGUARDS =====
