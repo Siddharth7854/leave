@@ -1,3 +1,6 @@
+// Load environment variables
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
@@ -14,11 +17,11 @@ app.use(express.json());
 
 // PostgreSQL Connection
 const pool = new Pool({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'buidco_leave',
-  password: 'sid91221',
-  port: 5432,
+  user: process.env.DB_USER || 'postgres',
+  host: process.env.DB_HOST || 'localhost',
+  database: process.env.DB_NAME || 'buidco_leave',
+  password: process.env.DB_PASSWORD || 'sid91221',
+  port: process.env.DB_PORT || 5432,
 });
 
 // ===== BACKEND SAFEGUARDS =====
@@ -176,6 +179,17 @@ setTimeout(checkDataIntegrity, 5000); // Run after 5 seconds
 pool.query('SELECT NOW()', (err, res) => {
   if (err) {
     console.error('Error connecting to the database:', err);
+    console.error('Database connection details:', {
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || 5432,
+      database: process.env.DB_NAME || 'buidco_leave',
+      user: process.env.DB_USER || 'postgres'
+    });
+    console.error('Please check:');
+    console.error('1. PostgreSQL service is running');
+    console.error('2. Database credentials are correct');
+    console.error('3. Database exists and is accessible');
+    console.error('4. Firewall/network settings allow connection');
   } else {
     console.log('Connected to PostgreSQL database');
   }
