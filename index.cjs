@@ -658,10 +658,14 @@ app.post('/api/leaves', async (req, res) => {
       });
     }
     
+    // Ensure startDate and endDate are always ISO strings with time
+    const startDateTime = (new Date(startDate)).toISOString();
+    const endDateTime = (new Date(endDate)).toISOString();
+    
     // Insert leave request
     const result = await pool.query(
       'INSERT INTO leaves (employee_id, employee_name, type, start_date, end_date, days, reason, status, applied_on, location, designation) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *',
-      [employeeId, employee.full_name, type.toUpperCase(), startDate, endDate, days, reason, 'Pending', new Date(), location, employee.designation]
+      [employeeId, employee.full_name, type.toUpperCase(), startDateTime, endDateTime, days, reason, 'Pending', new Date(), location, employee.designation]
     );
     
     // Add notification for admin
@@ -1034,7 +1038,7 @@ app.patch('/api/leaves/:id/cancel', async (req, res) => {
 
       // Restore leave balance
       console.log('Restoring balance for column:', balanceColumn, 'Days to restore:', leave.days);
-      await client.query(
+      await pool.query(
         `UPDATE employees 
          SET ${balanceColumn} = ${balanceColumn} + $1 
          WHERE employee_id = $2`,
@@ -1580,14 +1584,14 @@ app.post('/api/leaves/cancel-approved', async (req, res) => {
     const leaveStartDate = new Date(leave.start_date);
     const today = new Date();
 
-    // 12 hour expiry logic
+    // 48 hour expiry logic
     const approvedDate = leave.approved_date ? new Date(leave.approved_date) : null;
     if (!approvedDate) {
       return res.status(400).json({ error: 'Leave does not have an approved date.' });
     }
     const diffHours = (today - approvedDate) / (1000 * 60 * 60);
-    if (diffHours > 12) {
-      return res.status(400).json({ error: 'Cancellation window expired (12 hours passed).' });
+    if (diffHours > 48) {
+      return res.status(400).json({ error: 'Cancellation window expired (48 hours passed).' });
     }
 
     // Check if leave has already started
