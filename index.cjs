@@ -2020,9 +2020,14 @@ app.get('/', (req, res) => {
   });
 });
 
-// Start server
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+// Export Express app as Firebase Cloud Function
+const functions = require('firebase-functions');
+exports.api = functions.https.onRequest(app);
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); 
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Remove or comment out the app.listen call for Firebase Functions
+debugger;
+// app.listen(port, () => {
+//   console.log(`Server is running on port ${port}`);
+// }); 
