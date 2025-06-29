@@ -2020,14 +2020,11 @@ app.get('/', (req, res) => {
   });
 });
 
-// Export Express app as Firebase Cloud Function
-const functions = require('firebase-functions');
-exports.api = functions.https.onRequest(app);
-
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Remove or comment out the app.listen call for Firebase Functions
-debugger;
-// app.listen(port, () => {
-//   console.log(`Server is running on port ${port}`);
-// }); 
+// Start server for Render deployment
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Database: ${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 5432}`);
+}); 
